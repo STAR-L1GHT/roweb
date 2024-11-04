@@ -1,6 +1,5 @@
 local RoWeb = {Version = "v1.4.5"}
 RoWeb.__index = RoWeb
-_G.ID = math.random(1000, 2000)
 
 local reqName = syn and "syn.request" or
 http_request and "http_request" or
@@ -13,9 +12,6 @@ function RoWeb:new(url, options)
     local options = options or {}
     options.Url = url
     options.Method = "GET"
-
-    -- Отладочный вывод для проверки URL
-    print("Making request to URL: " .. options.Url)
 
     local req = request(options)
 
@@ -107,12 +103,13 @@ function RoWeb:getFingerprint()
 end
 
 function RoWeb:getBody(options)
-    if (options) and (options.JSON) and options.JSON == true then 
-        local jsonData = nil
-        local success, err = pcall(function() 
-            jsonData = game:GetService("HttpService"):JSONDecode(self.data.Body)  
+    if options and options.JSON then 
+        local success, jsonData = pcall(function() 
+            return game:GetService("HttpService"):JSONDecode(self.data.Body)  
         end)
-        if (not success) then return error("Cant parse body") end
+        if not success then
+            return error("Cannot parse body: " .. tostring(jsonData))
+        end
         return jsonData 
     end
     return self.data.Body
