@@ -1,4 +1,4 @@
-local RoWeb = {Version = "v1.4.5"}
+local RoWeb = {Version = "v1.4.6"}
 RoWeb.__index = RoWeb
 
 local reqName = syn and "syn.request" or
