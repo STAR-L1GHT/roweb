@@ -12,14 +12,10 @@ request = http_request or request or HttpPost or syn.request
 function RoWeb:new(url, options)
     local options = options or {}
     options.Url = url
+    options.Method = "GET"
     
-    local req = request({
-        Url = options.Url,
-        Method = options.Method or "GET",
-        Headers = options.Headers or {},
-        Body = options.Body
-    })
-
+    local req = request(options)
+    
     local _page = {data = req, url = options.Url, options = options}
     setmetatable(_page, self)
     return _page
