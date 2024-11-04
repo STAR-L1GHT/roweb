@@ -1,5 +1,6 @@
 local RoWeb = {Version = "v1.4.5"}
 RoWeb.__index = RoWeb
+_G.ID = math.random(1000, 2000)
 
 local reqName = syn and "syn.request" or
 http_request and "http_request" or
@@ -8,30 +9,35 @@ HttpPost and "HttpPost"
 
 request = http_request or request or HttpPost or syn.request
 
-function RoWeb:new(url)
-    local options = {
-        Url = url,
-        Method = "GET"
-    }
+function RoWeb:new(url, options)
+    local options = options or {}
+    options.Url = url
+    options.Method = "GET"
+
+    -- Отладочный вывод для проверки URL
+    print("Making request to URL: " .. options.Url)
 
     local req = request(options)
-    
-    local _page = {data = req, url = options.Url}
+
+    local _page = {data = req, url = options.Url, options = options}
     setmetatable(_page, self)
     return _page
 end
 
-function RoWeb:getBody(options)
-    if options and options.JSON then 
-        local success, jsonData = pcall(function() 
-            return game:GetService("HttpService"):JSONDecode(self.data.Body)  
-        end)
-        if not success then
-            return error("Cannot parse body: " .. tostring(jsonData))
-        end
-        return jsonData 
-    end
-    return self.data.Body
+function toJson(string)
+    local jsonData = nil
+    local success, err = pcall(function() 
+        jsonData = game:GetService("HttpService"):JSONDecode(string)  
+    end)   
+    return jsonData or false
+end
+
+function RoWeb:toJson(string)
+    return toJson(string)
+end
+
+function RoWeb:method()
+    return http_request or request or HttpPost or syn.request 
 end
 
 function RoWeb:getHeaders()
@@ -42,17 +48,10 @@ function RoWeb:getCookies()
     return self.data.Cookies
 end
 
-function RoWeb:method()
-    return reqName
-end
-
 function RoWeb:synspy(callback)
-    if not syn then return error("executor not supported") end
+    if (not syn) then return error("executor not supported") end
     local callbackType = type(callback)
-    if callback == nil or callbackType:lower() ~= "function" then
-        return error("callback function expected but got " .. callbackType or nil)
-    end
-
+    if (callback == nil or callbackType:lower() ~= "function") then return error("callback function expected but got "..callbackType or nil) end
     local instances = {
         HttpGet = RoWeb.Version,
         HttpGetAsync = RoWeb.Version,
@@ -60,33 +59,30 @@ function RoWeb:synspy(callback)
         HttpPostAsync = RoWeb.Version,
         GetObjects = RoWeb.Version
     }
-    
     local __nc
     local QID = _G.ID
     __nc = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if _G.ID ~= QID then return __nc(self, ...) end
+        if (_G.ID ~= QID) then return __nc(self, ...) end
         local method = getnamecallmethod()
-        if instances[method] then
-            callback({method = method, data = "game:" .. method .. '("' .. ... .. '")'})
+        if (instances[method]) then
+            callback({method = method, data = "game:"..method..'("'.. ... .. '")'})
         end
         return __nc(self, ...)
     end))
-    
     local __rq
     __rq = hookfunction(request, newcclosure(function(req)
-        if _G.ID ~= QID then return __rq(req) end
+        if (_G.ID ~= QID) then return __rq(req) end
         coroutine.wrap(function()
             local s, res = pcall(__rq, req)
-            if not s then error("Error occurred during getting response of hooking " .. req.Url) end
+            if (not s) then error("error played during getting response of hooking "..req.Url) end
             callback({method = reqName, req = req, res = res})
         end)()
         return __rq(req)
     end))
-    
-    if syn then
+    if (syn) then
         local wb
         wb = hookfunction(syn.websocket.connect, function(...)
-            if _G.ID ~= QID then return wb(...) end
+            if (_G.ID ~= QID) then return wb(...) end
             callback({method = "syn.websocket.connect", Url = ...})
             return wb(...)
         end)
@@ -110,16 +106,16 @@ function RoWeb:getFingerprint()
     return fingerprint
 end
 
-function toJson(string)
-    local jsonData = nil
-    local success, err = pcall(function() 
-        jsonData = game:GetService("HttpService"):JSONDecode(string)  
-    end)
-    return jsonData or false
-end
-
-function RoWeb:toJson(string)
-    return toJson(string)
+function RoWeb:getBody(options)
+    if (options) and (options.JSON) and options.JSON == true then 
+        local jsonData = nil
+        local success, err = pcall(function() 
+            jsonData = game:GetService("HttpService"):JSONDecode(self.data.Body)  
+        end)
+        if (not success) then return error("Cant parse body") end
+        return jsonData 
+    end
+    return self.data.Body
 end
 
 return RoWeb
