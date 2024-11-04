@@ -9,16 +9,35 @@ HttpPost and "HttpPost"
 request = http_request or request or HttpPost or syn.request
 
 function RoWeb:new(url, options)
-    local options = options or {}
-    options.Url = url
-    options.Method = "GET"
+  local options = options or {}
+  options.Method = "GET"
 
-    local req = request(options)
+  -- Проверяем и добавляем параметры к URL, если они есть
+  if options.Params then
+    local paramString = "?"
+    for k, v in pairs(options.Params) do
+      paramString = paramString .. k .. "=" .. tostring(v) .. "&"
+    end
+    -- Удаляем последний символ "&"
+    paramString = paramString:sub(1, -2)
+    url = url .. paramString
+    options.Params = nil -- удаляем параметры из options чтобы не попали дважды
+  end
 
-    local _page = {data = req, url = options.Url, options = options}
-    setmetatable(_page, self)
-    return _page
+  options.Url = url
+
+  -- Вывод финальной строки URL
+  print("Отправка запроса на URL:", options.Url)
+
+  -- Выполнение запроса
+  local req = request(options)
+
+  -- Создаем объект _page
+  local _page = {data = req, url = options.Url, options = options}
+  setmetatable(_page, self)
+  return _page
 end
+
 
 function toJson(string)
     local jsonData = nil
